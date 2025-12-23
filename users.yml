@@ -1,0 +1,8 @@
+---
+- name: "Configurando entorno para {{ current_user.name }}"
+  block:
+    - name: "Aplicar tareas comunes"
+      include_tasks: users/common.yml
+
+    - name: "Aplicar tareas específicas de {{ current_user.name }}"
+      include_tasks: "users/{{ current_user.name }}.yml"

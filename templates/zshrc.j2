@@ -1,0 +1,16 @@
+# Path de Oh My Zsh
+export ZSH="$HOME/.oh-my-zsh"
+
+# Tema (Starship se encargará del prompt, así que dejamos el default o 'robbyrussell')
+ZSH_THEME=""
+
+# Plugins de Oh My Zsh + los que instalamos
+plugins=(git opentofu python zsh-autosuggestions zsh-syntax-highlighting sudo docker zsh-history-substring-search)
+
+source $ZSH/oh-my-zsh.sh
+
+# Inicializar Starship (esto pisa el tema de OMZ para el prompt)
+eval "$(starship init zsh)"
+
+# Configuración personalizada del usuario
+export EDITOR='vim'

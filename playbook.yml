@@ -1,0 +1,82 @@
+---
+- hosts: ubuntu
+  become: yes
+  tasks:
+    # 1. TAREAS DE SYSTEMA
+    - name: "1. Añadir repositorio de VS Code"
+      shell: |
+        curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg
+        echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list
+      args:
+        creates: /etc/apt/sources.list.d/vscode.list
+
+    - name: "2. Instalar paquetes base (incluyendo VS Code)"
+      apt:
+        name: "{{ paquetes_base }}"
+        state: present
+        update_cache: yes
+
+    - name: "3. Instalar Nix (Determinate Systems)"
+      shell: |
+        curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --no-confirm
+      args:
+        creates: /nix/store # Solo se ejecuta si Nix no está instalado
+      register: nix_install
+
+    - name: "4. Crear usuarios"
+      user:
+        name: "{{ item.name }}"
+        shell: /usr/bin/zsh
+        groups: sudo,docker
+        append: yes
+        comment: "{{ item.name | capitalize }}"
+      loop: "{{ usuarios_config }}"
+
+    - name: "5. Configurar SSH para usuarios"
+      block:
+        - name: "Crear carpetas .ssh"
+          file:
+            path: "/home/{{ item.name }}/.ssh"
+            state: directory
+            owner: "{{ item.name }}"
+            mode: "0700"
+          loop: "{{ usuarios_config }}"
+
+        - name: "Escribir SSH config"
+          copy:
+            dest: "/home/{{ item.name }}/.ssh/config"
+            owner: "{{ item.name }}"
+            mode: "0600"
+            content: |
+              Host github.com
+                  HostName github.com
+                  User git
+                  IdentityFile ~/.ssh/{{ item.ssh_key }}
+          loop: "{{ usuarios_config }}"
+
+    - name: "6. Instalar FiraCode Nerd Font para todo el sistema"
+      shell: |
+        mkdir -p /usr/local/share/fonts/opentype
+        curl -L https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/FiraCode.zip -o /tmp/fira.zip
+        unzip -o /tmp/fira.zip -d /usr/local/share/fonts/opentype/
+        fc-cache -fv
+      args:
+        creates: /usr/local/share/fonts/opentype/FiraCodeNerdFont-Regular.tty
+      become: yes
+
+    # 2. TAREAS DE USUARIO
+    - name: "Orquestar configuración de usuarios"
+      include_tasks: "users.yml"
+      loop: "{{ usuarios_config }}"
+      loop_control:
+        loop_var: current_user
+
+    - name: "Limpieza estilo NixOS (Autoremove)"
+      apt:
+        autoremove: yes
+        purge: yes
+        update_cache: yes
+
+    - name: "Limpiar caché de paquetes"
+      apt:
+        autoclean: yes

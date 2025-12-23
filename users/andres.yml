@@ -1,0 +1,18 @@
+---
+- name: Configuración de nivel de usuario
+  block:
+    - name: "Instalar dependencias de sistema para Calibre"
+      apt:
+        name: [libopengl0, libegl1, libxcb-cursor0]
+        state: present
+
+    - name: "Instalar Calibre mediante el script oficial (Versión más reciente)"
+      shell: |
+        wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sh /dev/stdin
+      args:
+        creates: /usr/bin/calibre
+
+    - name: "Instalar Dropbox (URL directa)"
+      apt:
+        deb: "https://linux.dropbox.com/packages/ubuntu/dropbox_2025.05.20_amd64.deb"
+        state: present

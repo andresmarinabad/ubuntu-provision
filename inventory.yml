@@ -1,0 +1,25 @@
+---
+ubuntu:
+  hosts:
+    localhost:
+      ansible_connection: local
+      ansible_python_interpreter: /usr/bin/python3
+  vars:
+    paquetes_base:
+      - curl
+      - git
+      - vim
+      - zsh
+      - build-essential
+      - docker.io
+      - code
+    usuarios_config:
+      - name: andres
+        email: andres.marin.abad+git@gmail.com
+        ssh_key: andresmarinabad
+      - name: gandalf
+        email: andres.marin@aistechspace.com
+        ssh_key: gandalf-aistech
+    usuarios_sistema:
+      - andres
+      - gandalf

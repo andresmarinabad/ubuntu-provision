@@ -1,0 +1,107 @@
+---
+- name: Configuración a nivel global
+  become: yes
+  become_user: "{{ current_user.name }}"
+  become_method: sudo
+  block:
+    # 1. OH MY ZSH & PLUGINS
+    - name: "Verificar si Oh My Zsh ya está instalado"
+      stat:
+        path: "~/.oh-my-zsh"
+      register: oh_my_zsh_stat
+
+    - name: "Instalar Oh My Zsh (Silencioso)"
+      shell: |
+        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+      when: not oh_my_zsh_stat.stat.exists
+
+    - name: "Crear carpetas de plugins"
+      file:
+        path: "~/.oh-my-zsh/custom/plugins/{{ item.name }}"
+        state: directory
+      loop:
+        - { name: "zsh-autosuggestions" }
+        - { name: "zsh-syntax-highlighting" }
+
+    - name: "Descargar plugins de ZSH"
+      git:
+        repo: "{{ item.repo }}"
+        dest: "~/.oh-my-zsh/custom/plugins/{{ item.name }}"
+        depth: 1
+      loop:
+        - {
+            name: "zsh-autosuggestions",
+            repo: "https://github.com/zsh-users/zsh-autosuggestions",
+          }
+        - {
+            name: "zsh-syntax-highlighting",
+            repo: "https://github.com/zsh-users/zsh-syntax-highlighting.git",
+          }
+
+    - name: "Configurar .zshrc"
+      template:
+        src: templates/zshrc.j2
+        dest: "~/.zshrc"
+        mode: "0644"
+
+    # 2. VS CODE (Configuración de Usuario)
+    - name: "Asegurar directorio de configuración de VS Code"
+      file:
+        path: "~/.config/Code/User"
+        state: directory
+        mode: "0755"
+
+    - name: "Instalar extensiones de VS Code"
+      shell: "code --install-extension {{ item }} --force"
+      loop:
+        - eamodio.gitlens
+        - opentofu.vscode-opentofu
+        - pkief.material-icon-theme
+        - bbenoist.nix
+        - ms-python.python
+        - esbenp.prettier-vscode
+        - redhat.ansible
+        - github.vscode-github-actions
+        - ritwickdey.liveserver
+        - bradlc.vscode-tailwindcss
+        - davidanson.vscode-markdownlint
+      register: vscode_ext_result
+      changed_when: "'already installed' not in vscode_ext_result.stdout"
+
+    - name: "Configurar settings.json de VS Code (Incluyendo la fuente)"
+      copy:
+        dest: "~/.config/Code/User/settings.json"
+        content: |
+          {
+            "editor.fontFamily": "'FiraCode Nerd Font', 'Droid Sans Mono', 'monospace'",
+            "editor.fontLigatures": true,
+            "editor.fontSize": 14,
+            "terminal.integrated.fontFamily": "'FiraCode Nerd Font'",
+            "workbench.iconTheme": "material-icon-theme",
+            "editor.formatOnSave": true,
+            "workbench.colorTheme": "Default Light Modern"
+          }
+
+    - name: "Limpiar descarga anterior corrupta de Bitwarden"
+      file:
+        path: /tmp/bitwarden.deb
+        state: absent
+
+    - name: "Descargar Bitwarden Desktop (Forzando User-Agent)"
+      shell: |
+        curl -L -A "Mozilla/5.0 (X11; Linux x86_64)" \
+        "https://vault.bitwarden.com/download/?app=desktop&platform=linux&variant=deb" \
+        -o /tmp/bitwarden.deb
+      args:
+        creates: /tmp/bitwarden.deb
+
+    - name: "Instalar paquete Bitwarden"
+      become: yes
+      apt:
+        deb: /tmp/bitwarden.deb
+        state: present
+
+    - name: "Limpiar instalador temporal"
+      file:
+        path: /tmp/bitwarden.deb
+        state: absent
