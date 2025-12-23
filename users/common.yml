@@ -31,11 +31,15 @@
       loop:
         - {
             name: "zsh-autosuggestions",
-            repo: "https://github.com/zsh-users/zsh-autosuggestions",
+            repo: "https://github.com/zsh-users/zsh-autosuggestions.git",
           }
         - {
             name: "zsh-syntax-highlighting",
             repo: "https://github.com/zsh-users/zsh-syntax-highlighting.git",
+          }
+        - {
+            name: "zsh-history-substring-search",
+            repo: "https://github.com/zsh-users/zsh-history-substring-search.git",
           }
 
     - name: "Configurar .zshrc"
